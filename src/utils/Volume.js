@@ -14,6 +14,7 @@ export class Volume extends THREE.Object3D {
 		//console.log(this.constructor.name);
 
 		this._clip = args.clip || false;
+		this._geometry =( args.type || 0); // Allow round ClipBoxes
 		this._visible = true;
 		this.showVolumeLabel = true;
 		this._modifiable = args.modifiable || true;
@@ -90,6 +91,24 @@ export class Volume extends THREE.Object3D {
 		
 	}
 
+	get geometry () {
+		return this._geometry;
+	}
+
+	set geometry (value) {
+
+		if(this._geometry !== value){
+			this._geometry = value;
+
+			this.update();
+
+			this.dispatchEvent({
+				type: "geometry_changed",
+				object: this
+			});
+		}
+		
+	}
 	get modifieable () {
 		return this._modifiable;
 	}

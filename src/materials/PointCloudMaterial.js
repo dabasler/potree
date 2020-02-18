@@ -102,6 +102,7 @@ export class PointCloudMaterial extends THREE.RawShaderMaterial {
 			//clipSphereCount:	{ type: "f", value: 0 },
 			clipPolygonCount:	{ type: "i", value: 0 },
 			clipBoxes:			{ type: "Matrix4fv", value: [] },
+			clipBoxesType:		{ type: "1iv", value: [] },
 			//clipSpheres:		{ type: "Matrix4fv", value: [] },
 			clipPolygons:		{ type: "3fv", value: [] },
 			clipPolygonVCount:	{ type: "iv", value: [] },
@@ -288,11 +289,13 @@ export class PointCloudMaterial extends THREE.RawShaderMaterial {
 		}
 
 		this.uniforms.clipBoxes.value = new Float32Array(this.clipBoxes.length * 16);
-
+		this.uniforms.clipBoxesType.value = new Array(this.numClipBoxes); // Allow round ClipBoxes
+		
 		for (let i = 0; i < this.clipBoxes.length; i++) {
 			let box = clipBoxes[i];
 
 			this.uniforms.clipBoxes.value.set(box.inverse.elements, 16 * i);
+			this.uniforms.clipBoxesType.value[i] = box.box.geometry; // Allow round ClipBoxes
 		}
 
 		for (let i = 0; i < this.uniforms.clipBoxes.value.length; i++) {

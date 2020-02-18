@@ -1209,6 +1209,9 @@ export class Renderer {
 
 				const lClipBoxes = shader.uniformLocations["clipBoxes[0]"];
 				gl.uniformMatrix4fv(lClipBoxes, false, material.uniforms.clipBoxes.value);
+				
+				const lClipBoxesType = shader.uniformLocations["clipBoxesType[0]"]; // Allow round ClipBoxes
+				gl.uniform1iv(lClipBoxesType, material.uniforms.clipBoxesType.value); // Allow round ClipBoxes
 			}
 
 			// TODO CLIPSPHERES

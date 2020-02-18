@@ -48,6 +48,7 @@ uniform int clipTask;
 uniform int clipMethod;
 #if defined(num_clipboxes) && num_clipboxes > 0
 	uniform mat4 clipBoxes[num_clipboxes];
+	uniform int clipBoxesType[num_clipboxes]; // Allow round ClipBoxes
 #endif
 
 #if defined(num_clipspheres) && num_clipspheres > 0
@@ -750,7 +751,11 @@ void doClipping(){
 			bool inside = -0.5 <= clipPosition.x && clipPosition.x <= 0.5;
 			inside = inside && -0.5 <= clipPosition.y && clipPosition.y <= 0.5;
 			inside = inside && -0.5 <= clipPosition.z && clipPosition.z <= 0.5;
-
+			if (clipBoxesType[i]==1){inside = inside && sqrt(clipPosition.x*clipPosition.x + clipPosition.y*clipPosition.y) <= 0.5;}		 // Allow round ClipBoxes
+			if (clipBoxesType[i]==2){
+				inside = inside && sqrt(clipPosition.x*clipPosition.x + clipPosition.z*clipPosition.z ) <= 0.5;
+				inside = inside && sqrt(clipPosition.y*clipPosition.y + clipPosition.z*clipPosition.z ) <= 0.5;
+				}		 // Allow Sphere ClipBoxes
 			insideCount = insideCount + (inside ? 1 : 0);
 			clipVolumesCount++;
 		}	
