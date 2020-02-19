@@ -412,6 +412,15 @@ float getIntensity(){
 	return w;
 }
 
+vec3 getGCC(){
+	vec3 rgb = color;
+	float gcc = rgb.g/(rgb.r+rgb.g+rgb.b);
+	gcc= 4.0*gcc-0.7;
+	vec3 cGCC = texture2D(gradient, vec2(gcc,1.0-gcc)).rgb;
+	
+	return cGCC;
+}
+
 vec3 getGpsTime(){
 
 	float w = (gpsTime + uGpsOffset) * uGpsScale;
@@ -562,6 +571,8 @@ vec3 getColor(){
 	
 	#ifdef color_type_rgba
 		color = getRGB();
+	#elif defined color_type_gcc
+		color = getGCC();
 	#elif defined color_type_height || defined color_type_elevation
 		color = getElevation();
 	#elif defined color_type_rgb_height

@@ -142,6 +142,45 @@ let Gradients = {
 		[0.04, new THREE.Color(1, 1, 1)],
 		[1.00, new THREE.Color(1, 1, 1)]
 	],
+	
+	// NDVI AND GCC GRADIENTS
+	// https://github.com/jywarren/image-sequencer/blob/main/src/modules/Colormap/Colormap.js
+	
+	NDVI: [
+	   [0.00,    new THREE.Color(0, 0, 1)],
+	   [0.49999, new THREE.Color(0.15,  0.764, 0.764)],
+	   [0.5,     new THREE.Color(0,  0.5859, 0)],
+	   [0.75,    new THREE.Color(1, 1, 0)],
+	   [1.0,     new THREE.Color(1, 0.2,  0.2)] 
+	],
+	
+	FASTIE: [
+	   [0.000, new THREE.Color(1,  1,  1)],
+	   [0.167, new THREE.Color(0,  0,  0)],
+	   [0.330, new THREE.Color(1,  1,  1)],
+	   [0.500, new THREE.Color(0,  0,  0)],
+	   [0.550, new THREE.Color(0.55, 0.55, 1)],
+	   [0.630, new THREE.Color(0,  1, 0)],
+	   [0.750, new THREE.Color(1, 1, 0)],
+	   [0.950, new THREE.Color(1, 0, 0)],
+	   [1.000, new THREE.Color(1, 0, 1)]
+	],
+	
+	VEGSCAPE: [
+	   [0.00, new THREE.Color(0.416,  0.416,  0.368)],
+	   [0.0499, new THREE.Color(0.416,  0.416,  0.368)],
+	   [0.05, new THREE.Color(0.839,  0.384,  0.102)],
+	   [0.10, new THREE.Color(0.549,  0.247,  0.067)],
+	   [0.19, new THREE.Color(0.875,  0.710,  0.518)],
+	   [0.29, new THREE.Color(1, 1, 0)],
+	   [0.39, new THREE.Color(0.710,  0.745, 0.384)],
+	   [0.49, new THREE.Color(0.616, 0.808, 0.176)],
+	   [0.59, new THREE.Color(0.584, 0.937, 0.416)],
+	   [0.69, new THREE.Color(0.486, 1, 0.102)],
+	   [0.79, new THREE.Color(0.212, 0.065, 0.08)],
+	   [0.89, new THREE.Color(0.102, 0.353, 0.212)],
+	   [1.000, new THREE.Color(0.102, 0.353, 0.212)]
+	],
 };
 
 
