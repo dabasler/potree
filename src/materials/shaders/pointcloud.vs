@@ -415,7 +415,7 @@ float getIntensity(){
 vec3 getGCC(){
 	vec3 rgb = color;
 	float gcc = rgb.g/(rgb.r+rgb.g+rgb.b);
-	gcc= 4.0*gcc-0.7;
+	gcc= 4.0 * gcc - 0.85;
 	vec3 cGCC = texture2D(gradient, vec2(gcc,1.0-gcc)).rgb;
 	
 	return cGCC;

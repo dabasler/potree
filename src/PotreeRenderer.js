@@ -276,7 +276,7 @@ class Shader {
 					};
 				}
 			}
-
+/*
 			// uniform blocks
 			if(gl instanceof WebGL2RenderingContext){ 
 				let numBlocks = gl.getProgramParameter(program, gl.ACTIVE_UNIFORM_BLOCKS);
@@ -308,7 +308,7 @@ class Shader {
 
 				}
 			}
-
+*/
 			let cached = {
 				program: this.program,
 				vs: this.vs,
