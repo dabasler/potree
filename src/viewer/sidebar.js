@@ -12,6 +12,11 @@ import {CameraMode, ClipTask, ClipMethod} from "../defines.js"
 import {ScreenBoxSelectTool} from "../utils/ScreenBoxSelectTool.js"
 import {Utils} from "../utils.js"
 import {CameraAnimation} from "../modules/CameraAnimation/CameraAnimation.js"
+import {HierarchicalSlider} from "./HierarchicalSlider.js"
+import {OrientedImage} from "../modules/OrientedImages/OrientedImages.js";
+import {Images360} from "../modules/Images360/Images360.js";
+
+import JSON5 from "../../libs/json5-2.1.3/json5.mjs";
 
 export class Sidebar{
 
@@ -306,7 +311,7 @@ export class Sidebar{
 				Export: <br>
 				<a href="#" download="measure.json"><img name="geojson_export_button" src="${geoJSONIcon}" class="button-icon" style="height: 24px" /></a>
 				<a href="#" download="measure.dxf"><img name="dxf_export_button" src="${dxfIcon}" class="button-icon" style="height: 24px" /></a>
-				<a href="#" download="potree.json"><img name="potree_export_button" src="${potreeIcon}" class="button-icon" style="height: 24px" /></a>
+				<a href="#" download="potree.json5"><img name="potree_export_button" src="${potreeIcon}" class="button-icon" style="height: 24px" /></a>
 			`);
 
 			let elDownloadJSON = elExport.find("img[name=geojson_export_button]").parent();
@@ -345,7 +350,7 @@ export class Sidebar{
 			elDownloadPotree.click( (event) => {
 
 				let data = Potree.saveProject(this.viewer);
-				let dataString = JSON.stringify(data, null, "\t")
+				let dataString = JSON5.stringify(data, null, "\t")
 
 				let url = window.URL.createObjectURL(new Blob([dataString], {type: 'data:application/octet-stream'}));
 				elDownloadPotree.attr('href', url);
@@ -520,6 +525,8 @@ export class Sidebar{
 				// 	node.boundingBox = box;
 				// 	this.viewer.zoomTo(node, 1, 500);
 				// }
+			}else if(object instanceof Images360){
+				// TODO
 			}else if(object instanceof Geopackage){
 				// TODO
 			}
@@ -620,6 +627,21 @@ export class Sidebar{
 			});
 		};
 
+		let onImages360Added = (e) => {
+			const images = e.images;
+
+			const imagesIcon = `${Potree.resourcePath}/icons/picture.svg`;
+			const node = createNode(imagesID, "360° images", imagesIcon, images);
+
+			images.addEventListener("visibility_changed", () => {
+				if(images.visible){
+					tree.jstree('check_node', node);
+				}else{
+					tree.jstree('uncheck_node', node);
+				}
+			});
+		};
+
 		const onGeopackageAdded = (e) => {
 			const geopackage = e.geopackage;
 
@@ -648,6 +670,7 @@ export class Sidebar{
 		this.viewer.scene.addEventListener("volume_added", onVolumeAdded);
 		this.viewer.scene.addEventListener("camera_animation_added", onCameraAnimationAdded);
 		this.viewer.scene.addEventListener("oriented_images_added", onOrientedImagesAdded);
+		this.viewer.scene.addEventListener("360_images_added", onImages360Added);
 		this.viewer.scene.addEventListener("geopackage_added", onGeopackageAdded);
 		this.viewer.scene.addEventListener("polygon_clip_volume_added", onVolumeAdded);
 		this.viewer.scene.annotations.addEventListener("annotation_added", onAnnotationAdded);
@@ -715,6 +738,10 @@ export class Sidebar{
 
 		for(let images of scene.orientedImages){
 			onOrientedImagesAdded({images: images});
+		}
+
+		for(let images of scene.images360){
+			onImages360Added({images: images});
 		}
 
 		for(const geopackage of scene.geopackages){
@@ -856,6 +883,7 @@ export class Sidebar{
 		this.initClassificationList();
 		this.initReturnFilters();
 		this.initGPSTimeFilters();
+		this.initPointSourceIDFilters();
 
 	}
 
@@ -918,166 +946,41 @@ export class Sidebar{
 		let elGPSTimeFilterPanel = $('#gpstime_filter_panel');
 
 		{
-			const lblGpsL0 = elGPSTimeFilterPanel.find("#lblGpsTimeL0");
-			const lblGpsL1 = elGPSTimeFilterPanel.find("#lblGpsTimeL1");
-			const lblGpsL2 = elGPSTimeFilterPanel.find("#lblGpsTimeL2");
-			const lblGpsL3 = elGPSTimeFilterPanel.find("#lblGpsTimeL3");
-
-			const sldGpsL0 = elGPSTimeFilterPanel.find("#sldGpsTimeL0");
-			const sldGpsL1 = elGPSTimeFilterPanel.find("#sldGpsTimeL1");
-			const sldGpsL2 = elGPSTimeFilterPanel.find("#sldGpsTimeL2");
-			const sldGpsL3 = elGPSTimeFilterPanel.find("#sldGpsTimeL3");
-
-			const [min, max] = [Infinity, -Infinity];
-
-			const format = (value) => {
-				return Potree.Utils.addCommas(value.toFixed(3));
-			};
-
-			const updateLabels = () => {
-				const r0 = sldGpsL0.slider("option", "values");
-				const r1 = sldGpsL1.slider("option", "values");
-				const r2 = sldGpsL2.slider("option", "values");
-				const r3 = sldGpsL3.slider("option", "values");
-
-				lblGpsL0.html(`${format(r0[0])} to ${format(r0[1])}`);
-				lblGpsL1.html(`${format(r1[0])} to ${format(r1[1])}`);
-				lblGpsL2.html(`${format(r2[0])} to ${format(r2[1])}`);
-				lblGpsL3.html(`${format(r3[0])} to ${format(r3[1])}`);
-			};
-
-			sldGpsL0.slider({
-				range: true,
-				min: min, max: max, step: 0.01,
-				values: [min, max],
-				slide: (event, ui) => {
-					this.viewer.setFilterGPSTimeRange(...ui.values);
-
-					sldGpsL1.slider({
-						range: true,
-						min: ui.values[0],
-						max: ui.values[1],
-						values: ui.values,
-					});
-
-					sldGpsL2.slider({
-						range: true,
-						min: ui.values[0],
-						max: ui.values[1],
-						values: ui.values,
-					});
-
-					sldGpsL3.slider({
-						range: true,
-						min: ui.values[0],
-						max: ui.values[1],
-						values: ui.values,
-					});
-
-					updateLabels();
-				}
+			let slider = new HierarchicalSlider({
+				levels: 4,
+				slide: (event) => {
+					this.viewer.setFilterGPSTimeRange(...event.values);
+				},
 			});
 
-			sldGpsL1.slider({
-				range: true,
-				min: min, max: max, step: 0.01,
-				values: [min, max],
-				slide: (event, ui) => {
-					this.viewer.setFilterGPSTimeRange(...ui.values);
-					
-					sldGpsL2.slider({
-						range: true,
-						min: ui.values[0],
-						max: ui.values[1],
-						values: ui.values,
-					});
+			let initialized = false;
 
-					sldGpsL3.slider({
-						range: true,
-						min: ui.values[0],
-						max: ui.values[1],
-						values: ui.values,
-					});
+			let initialize = () => {
+				
+				let elRangeContainer = $("#gpstime_multilevel_range_container");
+				elRangeContainer[0].prepend(slider.element);
 
-					updateLabels();
-				}
-			});
+				let extent = this.viewer.getGpsTimeExtent();
 
-			sldGpsL2.slider({
-				range: true,
-				min: min, max: max, step: 0.01,
-				values: [min, max],
-				slide: (event, ui) => {
-					this.viewer.setFilterGPSTimeRange(...ui.values);
+				slider.setRange(extent);
+				slider.setValues(extent);
 
-					sldGpsL3.slider({
-						range: true,
-						min: ui.values[0],
-						max: ui.values[1],
-						values: ui.values,
-					});
 
-					updateLabels();
-				}
-			});
-
-			sldGpsL3.slider({
-				range: true,
-				min: min, max: max, step: 0.01,
-				values: [min, max],
-				slide: (event, ui) => {
-					this.viewer.setFilterGPSTimeRange(...ui.values);
-
-					updateLabels();
-				}
-			});
-
-			const initialize = (extent) => {
-				sldGpsL0.slider({
-					min: extent[0],
-					max: extent[1],
-					values: extent,
-				});
-
-				sldGpsL1.slider({
-					min: extent[0],
-					max: extent[1],
-					values: extent,
-				});
-
-				sldGpsL2.slider({
-					min: extent[0],
-					max: extent[1],
-					values: extent,
-				});
-
-				sldGpsL3.slider({
-					min: extent[0],
-					max: extent[1],
-					values: extent,
-				});
-
-				updateLabels();
+				initialized = true;
 			};
 
 			this.viewer.addEventListener("update", (e) => {
-				const extent = this.viewer.getGpsTimeExtent();
+				let extent = this.viewer.getGpsTimeExtent();
+				let gpsTimeAvailable = extent[0] !== Infinity;
 
-				const rangeL0 = sldGpsL0.slider("option", "values");
-
-				const sliderInitialized = rangeL0[0] !== Infinity;
-				const gpsTimeAvailable = extent[0] !== Infinity;
-				
-				if(!sliderInitialized && gpsTimeAvailable){
-					initialize(extent);
+				if(!initialized && gpsTimeAvailable){
+					initialize();
 				}
 
-				sldGpsL0.slider({min: extent[0], max: extent[1]});
-
-				//updateLabels();
+				slider.setRange(extent);
 			});
 		}
-			
+
 
 		{
 			
@@ -1109,6 +1012,73 @@ export class Sidebar{
 				}
 			});
 		}
+
+	}
+
+	initPointSourceIDFilters() {
+		let elPointSourceIDFilterPanel = $('#pointsourceid_filter_panel');
+
+		{
+			let slider = new HierarchicalSlider({
+				levels: 4,
+				range: [0, 65535],
+				precision: 1,
+				slide: (event) => {
+					let values = event.values;
+					this.viewer.setFilterPointSourceIDRange(values[0], values[1]);
+				}
+			});
+
+			let initialized = false;
+
+			let initialize = () => {
+				elPointSourceIDFilterPanel[0].prepend(slider.element);
+
+				initialized = true;
+			};
+
+			this.viewer.addEventListener("update", (e) => {
+				let extent = this.viewer.filterPointSourceIDRange;
+
+				if(!initialized){
+					initialize();
+
+					slider.setValues(extent);
+				}
+				
+			});
+		}
+
+		// let lblPointSourceID = elPointSourceIDFilterPanel.find("#lblPointSourceID");
+		// let elPointSourceID = elPointSourceIDFilterPanel.find("#spnPointSourceID");
+
+		// let slider = new ZoomableSlider();
+		// elPointSourceID[0].appendChild(slider.element);
+		// slider.update();
+
+		// slider.change( () => {
+		// 	let range = slider.chosenRange;
+		// 	this.viewer.setFilterPointSourceIDRange(range[0], range[1]);
+		// });
+
+		// let onPointSourceIDExtentChanged = (event) => {
+		// 	let range = this.viewer.filterPointSourceIDExtent;
+		// 	slider.setVisibleRange(range);
+		// };
+
+		// let onPointSourceIDChanged = (event) => {
+		// 	let range = this.viewer.filterPointSourceIDRange;
+
+		// 	let precision = 1;
+		// 	let from = `${Utils.addCommas(range[0].toFixed(precision))}`;
+		// 	let to = `${Utils.addCommas(range[1].toFixed(precision))}`;
+		// 	lblPointSourceID[0].innerHTML = `${from} to ${to}`;
+
+		// 	slider.setRange(range);
+		// };
+
+		// this.viewer.addEventListener('filter_point_source_id_range_changed', onPointSourceIDChanged);
+		// this.viewer.addEventListener('filter_point_source_id_extent_changed', onPointSourceIDExtentChanged);
 
 	}
 
@@ -1268,6 +1238,7 @@ export class Sidebar{
 			["FR", "fr"],
 			["DE", "de"],
 			["JP", "jp"],
+			["ES", "es"],
 			["SE", "se"]
 		];
 
@@ -1348,6 +1319,10 @@ export class Sidebar{
 		this.viewer.addEventListener('fov_changed', (event) => {
 			$('#lblFOV')[0].innerHTML = parseInt(this.viewer.getFOV());
 			$('#sldFOV').slider({value: this.viewer.getFOV()});
+		});
+
+		this.viewer.addEventListener('use_edl_changed', (event) => {
+			$('#chkEDLEnabled')[0].checked = this.viewer.getEDLEnabled();
 		});
 
 		this.viewer.addEventListener('edl_radius_changed', (event) => {
@@ -1436,7 +1411,7 @@ export class Sidebar{
 
 		elNavigation.append(this.createToolIcon(
 			Potree.resourcePath + "/images/compas.svg",
-			"Compass",
+			"[title]tt.compass",
 			() => {
 				const visible = !this.viewer.compass.isVisible();
 				this.viewer.compass.setVisible(visible);
@@ -1445,7 +1420,7 @@ export class Sidebar{
 
 		elNavigation.append(this.createToolIcon(
 			Potree.resourcePath + "/icons/camera_animation.svg",
-			"Camera Animation",
+			"[title]tt.camera_animation",
 			() => {
 				const animation = CameraAnimation.defaultFromView(this.viewer);
 

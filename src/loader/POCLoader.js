@@ -14,6 +14,9 @@ function parseAttributes(cloudjs){
 
 	const replacements = {
 		"COLOR_PACKED": "rgba",
+		"RGBA": "rgba",
+		"INTENSITY": "intensity",
+		"CLASSIFICATION": "classification",
 	};
 
 	const replaceOldNames = (old) => {

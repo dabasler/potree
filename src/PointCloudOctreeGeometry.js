@@ -145,6 +145,9 @@ export class PointCloudOctreeGeometryNode extends PointCloudTreeNode{
 
 		// load hierarchy
 		let callback = function (node, hbuffer) {
+
+			let tStart = performance.now();
+
 			let view = new DataView(hbuffer);
 
 			let stack = [];
@@ -205,6 +208,12 @@ export class PointCloudOctreeGeometryNode extends PointCloudTreeNode{
 				nodes[name] = currentNode;
 			}
 
+			let duration = performance.now() - tStart;
+			if(duration > 5){
+				let msg = `duration: ${duration}ms, numNodes: ${decoded.length}`;
+				console.log(msg);
+			}
+
 			node.loadPoints();
 		};
 		if ((node.level % node.pcoGeometry.hierarchyStepSize) === 0) {
@@ -244,7 +253,8 @@ export class PointCloudOctreeGeometryNode extends PointCloudTreeNode{
 			this.geometry = null;
 			this.loaded = false;
 
-			// this.dispatchEvent( { type: 'dispose' } );
+			this.dispatchEvent( { type: 'dispose' } );
+			
 			for (let i = 0; i < this.oneTimeDisposeHandlers.length; i++) {
 				let handler = this.oneTimeDisposeHandlers[i];
 				handler();

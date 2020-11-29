@@ -83,6 +83,7 @@ uniform vec2 intensityRange;
 
 uniform vec2 uFilterReturnNumberRange;
 uniform vec2 uFilterNumberOfReturnsRange;
+uniform vec2 uFilterPointSourceIDClipRange;
 uniform vec2 uFilterGPSTimeClipRange;
 uniform float uGpsScale;
 uniform float uGpsOffset;
@@ -149,7 +150,7 @@ float round(float number){
 // OCTREE
 // ---------------------
 
-#if (defined(adaptive_point_size) || defined(color_type_lod)) && defined(tree_type_octree)
+#if (defined(adaptive_point_size) || defined(color_type_level_of_detail)) && defined(tree_type_octree)
 /**
  * number of 1-bits up to inclusive index position
  * number is treated as if it were an integer in the range 0-255
@@ -240,8 +241,11 @@ float getLOD(){
 			depth++;
 		}else{
 			// no more visible child nodes at this position
-			return value.a * 255.0;
-			//return depth;
+			//return value.a * 255.0;
+
+			float lodOffset = (255.0 * value.a) / 10.0 - 10.0;
+
+			return depth  + lodOffset;
 		}
 		
 		offset = offset + (vec3(1.0, 1.0, 1.0) * nodeSizeAtLevel * 0.5) * index3d;
@@ -307,7 +311,7 @@ float getPointSizeAttenuation(){
 // KD-TREE
 // ---------------------
 
-#if (defined(adaptive_point_size) || defined(color_type_lod)) && defined(tree_type_kdtree)
+#if (defined(adaptive_point_size) || defined(color_type_level_of_detail)) && defined(tree_type_kdtree)
 
 float getLOD(){
 	vec3 offset = vec3(0.0, 0.0, 0.0);
@@ -450,6 +454,46 @@ vec4 getClassification(){
 	vec4 classColor = texture2D(classificationLUT, uv);
 	
 	return classColor;
+}
+
+vec3 getReturns(){
+
+	// 0b 00_000_111
+	float rn = mod(returnNumber, 8.0);
+	// 0b 00_111_000
+	float nr = mod(returnNumber / 8.0, 8.0);
+
+	if(nr <= 1.0){
+		return vec3(1.0, 0.0, 0.0);
+	}else{
+		return vec3(0.0, 1.0, 0.0);
+	}
+
+	// return vec3(nr / 4.0, 0.0, 0.0);
+
+	// if(nr == 1.0){
+	// 	return vec3(1.0, 1.0, 0.0);
+	// }else{
+	// 	if(rn == 1.0){
+	// 		return vec3(1.0, 0.0, 0.0);
+	// 	}else if(rn == nr){
+	// 		return vec3(0.0, 0.0, 1.0);
+	// 	}else{
+	// 		return vec3(0.0, 1.0, 0.0);
+	// 	}
+	// }
+
+	// if(numberOfReturns == 1.0){
+	// 	return vec3(1.0, 1.0, 0.0);
+	// }else{
+	// 	if(returnNumber == 1.0){
+	// 		return vec3(1.0, 0.0, 0.0);
+	// 	}else if(returnNumber == numberOfReturns){
+	// 		return vec3(0.0, 0.0, 1.0);
+	// 	}else{
+	// 		return vec3(0.0, 1.0, 0.0);
+	// 	}
+	// }
 }
 
 vec3 getReturnNumber(){
@@ -604,9 +648,13 @@ vec3 getColor(){
 		color = cl.rgb;
 	#elif defined color_type_return_number
 		color = getReturnNumber();
+	#elif defined color_type_returns
+		color = getReturns();
 	#elif defined color_type_number_of_returns
 		color = getNumberOfReturns();
 	#elif defined color_type_source_id
+		color = getSourceID();
+	#elif defined color_type_point_source_id
 		color = getSourceID();
 	#elif defined color_type_normal
 		color = (modelMatrix * vec4(normal, 0.0)).xyz;
@@ -650,12 +698,22 @@ float getPointSize(){
 			pointSize = (worldSpaceSize / uOrthoWidth) * uScreenWidth;
 		} else {
 
-			if(uIsLeafNode && false){
-				pointSize = size * spacing * projFactor;
-			}else{
+			// float leafSpacing = 0.122069092 * 8.0;
+			
+			// bool isLeafNode = getLOD() == 1000.0;
+			// if(isLeafNode){
+			// 	// pointSize = size * spacing * projFactor;
+
+			// 	float worldSpaceSize = size * leafSpacing;
+			// 	pointSize = worldSpaceSize * projFactor;
+			// }else{
 				float worldSpaceSize = 1.0 * size * r / getPointSizeAttenuation();
+
+				// minimum world space size
+				// worldSpaceSize = max(worldSpaceSize, leafSpacing);
+
 				pointSize = worldSpaceSize * projFactor;
-			}
+			// }
 		}
 	#endif
 
@@ -753,6 +811,17 @@ void doClipping(){
 	}
 	#endif
 
+	#if defined(clip_point_source_id_enabled)
+	{ // point source id filter
+		vec2 range = uFilterPointSourceIDClipRange;
+		if(pointSourceID < range.x || pointSourceID > range.y){
+			gl_Position = vec4(100.0, 100.0, 100.0, 0.0);
+			
+			return;
+		}
+	}
+	#endif
+
 	int clipVolumesCount = 0;
 	int insideCount = 0;
 
@@ -834,6 +903,11 @@ void main() {
 
 	//gl_PointSize = 5.0;
 	//vColor = vec3(1.0, 1.0, 1.0);
+
+	// only for "replacing" approaches
+	// if(getLOD() != uLevel){
+	// 	gl_Position = vec4(10.0, 10.0, 10.0, 1.0);
+	// }
 
 
 	#if defined hq_depth_pass
@@ -920,13 +994,6 @@ void main() {
 				vColor = vColor * visibility + vColor * uShadowColor * (1.0 - visibility);
 			}
 
-			{ // debug
-				vec4 depthMapValue = texture2D(uShadowMap[i], vec2(u, v) + sampleLocations[0]);
-
-				float t = depthMapValue.x * 20.0;
-				vColor = vec3(t, t, t);
-
-			}
 
 		}
 

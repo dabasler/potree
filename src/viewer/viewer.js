@@ -30,6 +30,7 @@ import {DeviceOrientationControls} from "../navigation/DeviceOrientationControls
 import { EventDispatcher } from "../EventDispatcher.js";
 import { ClassificationScheme } from "../materials/ClassificationScheme.js";
 
+import JSON5 from "../../libs/json5-2.1.3/json5.mjs";
 
 
 export class Viewer extends EventDispatcher{
@@ -115,6 +116,7 @@ export class Viewer extends EventDispatcher{
 		this.filterReturnNumberRange = [0, 7];
 		this.filterNumberOfReturnsRange = [0, 7];
 		this.filterGPSTimeRange = [-Infinity, Infinity];
+		this.filterPointSourceIDRange = [0, 65535];
 
 		this.potreeRenderer = null;
 		this.edlRenderer = null;
@@ -139,7 +141,12 @@ export class Viewer extends EventDispatcher{
 
 		this.initThree();
 		this.prepareVR();
-		this.initDragAndDrop();
+
+		if(args.noDragAndDrop){
+			
+		}else{
+			this.initDragAndDrop();
+		}
 
 		if(typeof Stats !== "undefined"){
 			this.stats = new Stats();
@@ -662,6 +669,11 @@ export class Viewer extends EventDispatcher{
 		this.dispatchEvent({'type': 'filter_gps_time_range_changed', 'viewer': this});
 	}
 
+	setFilterPointSourceIDRange(from, to){
+		this.filterPointSourceIDRange = [from, to]
+		this.dispatchEvent({'type': 'filter_point_source_id_range_changed', 'viewer': this});
+	}
+
 	setLengthUnit (value) {
 		switch (value) {
 			case 'm':
@@ -919,7 +931,8 @@ export class Viewer extends EventDispatcher{
 
 		const response = await fetch(url);
 	
-		const json = await response.json();
+		const text = await response.text();
+		const json = JSON5.parse(text);
 		// const json = JSON.parse(text);
 
 		if(json.type === "Potree"){
@@ -1112,7 +1125,9 @@ export class Viewer extends EventDispatcher{
 
 	loadGUI(callback){
 
-		this.onGUILoaded(callback);
+		if(callback){
+			this.onGUILoaded(callback);
+		}
 
 		let viewer = this;
 		let sidebarContainer = $('#potree_sidebar_container');
@@ -1140,7 +1155,7 @@ export class Viewer extends EventDispatcher{
 			i18n.init({
 				lng: 'en',
 				resGetPath: Potree.resourcePath + '/lang/__lng__/__ns__.json',
-				preload: ['en', 'fr', 'de', 'jp', 'se'],
+				preload: ['en', 'fr', 'de', 'jp', 'se', 'es'],
 				getAsync: true,
 				debug: false
 			}, function (t) {
@@ -1317,10 +1332,12 @@ export class Viewer extends EventDispatcher{
 		});
 		//this.renderer.domElement.focus();
 
+		// NOTE: If extension errors occur, pass the string into this.renderer.extensions.get(x) before enabling
 		// enable frag_depth extension for the interpolation shader, if available
 		let gl = this.renderer.getContext();
 		gl.getExtension('EXT_frag_depth');
 		gl.getExtension('WEBGL_depth_texture');
+		gl.getExtension('WEBGL_color_buffer_float'); 	// Enable explicitly for more portability, EXT_color_buffer_float is the proper name in WebGL 2
 		
 		//if(gl instanceof WebGLRenderingContext){
 			let extVAO = gl.getExtension('OES_vertex_array_object');
@@ -1557,6 +1574,7 @@ export class Viewer extends EventDispatcher{
 			material.uniforms.uFilterReturnNumberRange.value = this.filterReturnNumberRange;
 			material.uniforms.uFilterNumberOfReturnsRange.value = this.filterNumberOfReturnsRange;
 			material.uniforms.uFilterGPSTimeClipRange.value = this.filterGPSTimeRange;
+			material.uniforms.uFilterPointSourceIDClipRange.value = this.filterPointSourceIDRange;
 
 			material.classification = this.classifications;
 			material.recomputeClassification();
@@ -1749,10 +1767,15 @@ export class Viewer extends EventDispatcher{
 				boxes.push(...profile.boxes);
 			}
 			
-			let clipBoxes = boxes.map( box => {
+			// Needed for .getInverse(), pre-empt a determinant of 0, see #815 / #816
+			let degenerate = (box) => box.matrixWorld.determinant() !== 0;
+			
+			let clipBoxes = boxes.filter(degenerate).map( box => {
 				box.updateMatrixWorld();
+				
 				let boxInverse = new THREE.Matrix4().getInverse(box.matrixWorld);
 				let boxPosition = box.getWorldPosition(new THREE.Vector3());
+
 				return {box: box, inverse: boxInverse, position: boxPosition};
 			});
 

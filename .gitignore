@@ -1,6 +1,7 @@
 /build
 /test
 /test1
+/360
 node_modules
 docs/.marking_your_own_pointcloud_loader.md.html
 docs/.file_format.md.html
@@ -29,3 +30,4 @@ libs/CesiumUnminified
 /pointclouds/sjl2
 /pointclouds/morro_bay_converted
 /pointclouds/helimap_epalinges
+pointclouds/F

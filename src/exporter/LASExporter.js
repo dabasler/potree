@@ -34,7 +34,7 @@ export class LASExporter {
 		// system identifier o:26 l:32
 
 		// generating software o:58 l:32
-		setString('Potree 1.6', 58, buffer);
+		setString('Potree 1.7', 58, buffer);
 
 		// file creation day of year o:90 l:2
 		// file creation year o:92 l:2
@@ -132,10 +132,11 @@ export class LASExporter {
 				view.setUint16(boffset + 18, points.data.pointSourceID[i]);
 			}
 
-			if (points.data.color) {
-				view.setUint16(boffset + 20, (points.data.color[4 * i + 0] * 255), true);
-				view.setUint16(boffset + 22, (points.data.color[4 * i + 1] * 255), true);
-				view.setUint16(boffset + 24, (points.data.color[4 * i + 2] * 255), true);
+			if (points.data.rgba) {
+				let rgba = points.data.rgba;
+				view.setUint16(boffset + 20, (rgba[4 * i + 0] * 255), true);
+				view.setUint16(boffset + 22, (rgba[4 * i + 1] * 255), true);
+				view.setUint16(boffset + 24, (rgba[4 * i + 2] * 255), true);
 			}
 
 			boffset += 28;

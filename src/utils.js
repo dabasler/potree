@@ -5,7 +5,6 @@ import {Profile} from "./utils/Profile.js";
 import {Measure} from "./utils/Measure.js";
 import {PolygonClipVolume} from "./utils/PolygonClipVolume.js";
 
-
 export class Utils {
 	static async loadShapefileFeatures (file, callback) {
 		let features = [];
@@ -527,9 +526,8 @@ export class Utils {
 		};
 
 		let vector = new THREE.Vector3(normalizedMouse.x, normalizedMouse.y, 0.5);
-		let origin = new THREE.Vector3(normalizedMouse.x, normalizedMouse.y, 0);
+		let origin = camera.position.clone();
 		vector.unproject(camera);
-		origin.unproject(camera);
 		let direction = new THREE.Vector3().subVectors(vector, origin).normalize();
 
 		let ray = new THREE.Ray(origin, direction);
@@ -918,7 +916,7 @@ export class Utils {
 		}else{
 			// if there is no projection, assume [0, 1, 0] as north direction
 
-			const vec = p1.clone().add(new THREE.Vector3(0, 1, 0).multiplyScalar(distance));
+			const vec = new THREE.Vector3(0, 1, 0).multiplyScalar(distance);
 			
 			return vec;
 		}
@@ -932,8 +930,14 @@ export class Utils {
 			// if there is a projection, transform coordinates to WGS84
 			// and compute angle to north there
 
-			proj4.defs("pointcloud", projection);
-			const transform = proj4("pointcloud", "WGS84");
+			let transform;
+
+			if (projection.includes('EPSG')) {
+				transform = proj4(projection, "WGS84");
+			} else {
+				proj4.defs("pointcloud", projection);
+				transform = proj4("pointcloud", "WGS84");
+			}
 
 			const llP1 = transform.forward(p1.toArray());
 			const llP2 = transform.forward(p2.toArray());

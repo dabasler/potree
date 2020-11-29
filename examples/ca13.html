@@ -39,6 +39,8 @@
 	</div>
 	
 	<script>
+
+		// import * as Potree from "../src/Potree.js";
 	
 		window.viewer = new Potree.Viewer(document.getElementById("potree_render_area"));
 		
@@ -49,23 +51,19 @@
 		
 		viewer.setDescription("");
 		
-		viewer.loadGUI(() => {
+		viewer.loadGUI().then( () => {
 			viewer.setLanguage('en');
-			//$("#menu_appearance").next().show();
-			$("#menu_tools").next().show();
-			$("#menu_scene").next().show();
-			$("#menu_filters").next().show();
+			// $("#menu_filters").next().show();
 			viewer.toggleSidebar();
 		});
 		
-		// Sigeom
 		Potree.loadPointCloud("http://5.9.65.151/mschuetz/potree/resources/pointclouds/opentopography/CA13_1.4/cloud.js", "CA13", function(e){
 			viewer.scene.addPointCloud(e.pointcloud);
 			e.pointcloud.position.z = 0;
 			let material = e.pointcloud.material;
 			material.size = 0.8;
 			material.pointSizeType = Potree.PointSizeType.ADAPTIVE;
-			material.activeAttributeName = "RGBA";
+			material.activeAttributeName = "rgba";
 			
 			viewer.scene.view.setView(
 				[694517.403, 3899262.595, 10642.698],

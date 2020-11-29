@@ -18,7 +18,15 @@ function loadPointCloud(viewer, data){
 
 			if(data.material.ranges != null){
 				for(let range of data.material.ranges){
-					target.setRange(range.name, range.value);
+
+					if(range.name === "elevationRange"){
+						target.elevationRange = range.value;
+					}else if(range.name === "intensityRange"){
+						target.intensityRange = range.value;
+					}else{
+						target.setRange(range.name, range.value);
+					}
+
 				}
 			}
 
@@ -217,10 +225,17 @@ function loadAnnotationItem(item){
 	const annotation = new Annotation({
 		position: item.position,
 		title: item.title,
+		cameraPosition: item.cameraPosition,
+		cameraTarget: item.cameraTarget,
 	});
 
+
+	annotation.description = item.description;
 	annotation.uuid = item.uuid;
-	annotation.offset.set(...item.offset);
+
+	if(item.offset){
+		annotation.offset.set(...item.offset);
+	}
 
 	return annotation;
 }
@@ -263,28 +278,7 @@ function loadAnnotations(viewer, data){
 
 	for(const item of data){
 		traverse(item, viewer.scene.annotations);
-		// viewer.scene.annotations.add(annotation);
 	}
-
-
-
-	// const {items, hierarchy} = data;
-
-	// const existingAnnotations = [];
-	// viewer.scene.annotations.traverseDescendants(annotation => {
-	// 	existingAnnotations.push(annotation);
-	// });
-
-	// for(const item of items){
-
-	// 	const duplicate = existingAnnotations.find(ann => ann.uuid === item.uuid);
-	// 	if(duplicate){
-	// 		continue;
-	// 	}
-
-	// 	const annotation = loadAnnotationItem(item);
-	// 	viewer.scene.annotations.add(annotation);
-	// }
 
 }
 
@@ -353,8 +347,10 @@ export async function loadProject(viewer, data){
 		loadProfile(viewer, profile);
 	}
 
-	for(const images of data.orientedImages){
-		loadOrientedImages(viewer, images);
+	if(data.orientedImages){
+		for(const images of data.orientedImages){
+			loadOrientedImages(viewer, images);
+		}
 	}
 
 	loadAnnotations(viewer, data.annotations);
@@ -365,8 +361,10 @@ export async function loadProject(viewer, data){
 	// before we can load stuff in other projections such as geopackages
 	//await Promise.any(pointcloudPromises); // (not yet supported)
 	Utils.waitAny(pointcloudPromises).then( () => {
-		for(const geopackage of data.geopackages){
-			loadGeopackage(viewer, geopackage);
+		if(data.geopackages){
+			for(const geopackage of data.geopackages){
+				loadGeopackage(viewer, geopackage);
+			}
 		}
 	});
 

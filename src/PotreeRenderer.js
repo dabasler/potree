@@ -139,10 +139,12 @@ let attributeLocations = {
 	"classification": {name: "classification", location: 3},
 	"returnNumber": {name: "returnNumber", location: 4},
 	"return number": {name: "returnNumber", location: 4},
+	"returns": {name: "returnNumber", location: 4},
 	"numberOfReturns": {name: "numberOfReturns", location: 5},
 	"number of returns": {name: "numberOfReturns", location: 5},
 	"pointSourceID": {name: "pointSourceID", location: 6},
 	"source id": {name: "pointSourceID", location: 6},
+	"point source id": {name: "pointSourceID", location: 6},
 	"indices": {name: "indices", location: 7},
 	"normal": {name: "normal", location: 8},
 	"spacing": {name: "spacing", location: 9},
@@ -555,6 +557,18 @@ export class Renderer {
 		this.toggle = 0;
 	}
 
+	deleteBuffer(geometry) {
+
+		let gl = this.gl;
+		let webglBuffer = this.buffers.get(geometry);
+		if (webglBuffer != null) {
+			for (let attributeName in geometry.attributes) {
+				gl.deleteBuffer(webglBuffer.vbos.get(attributeName).handle);
+			}
+			this.buffers.delete(geometry);
+		}
+	}
+
 	createBuffer(geometry){
 		let gl = this.gl;
 		let webglBuffer = new WebGLBuffer();
@@ -595,6 +609,12 @@ export class Renderer {
 
 		gl.bindBuffer(gl.ARRAY_BUFFER, null);
 		gl.bindVertexArray(null);
+
+		let disposeHandler = (event) => {
+			this.deleteBuffer(geometry);
+			geometry.removeEventListener("dispose", disposeHandler);
+		};
+		geometry.addEventListener("dispose", disposeHandler);
 
 		return webglBuffer;
 	}
@@ -696,7 +716,6 @@ export class Renderer {
 				}
 			}
 
-
 			let world = node.sceneNode.matrixWorld;
 			worldView.multiplyMatrices(view, world);
 
@@ -714,13 +733,18 @@ export class Renderer {
 				shader.setUniform("uDebug", false);
 			}
 
-			let isLeaf = false;
-			if(node instanceof PointCloudOctreeNode){
-				isLeaf = Object.keys(node.children).length === 0;
-			}else if(node instanceof PointCloudArena4DNode){
-				isLeaf = node.geometryNode.isLeaf;
-			}
-			shader.setUniform("uIsLeafNode", isLeaf);
+			// let isLeaf = false;
+			// if(node instanceof PointCloudOctreeNode){
+			// 	isLeaf = Object.keys(node.children).length === 0;
+			// }else if(node instanceof PointCloudArena4DNode){
+			// 	isLeaf = node.geometryNode.isLeaf;
+			// }
+			// shader.setUniform("uIsLeafNode", isLeaf);
+
+			// let isLeaf = node.children.filter(n => n != null).length === 0;
+			// if(!isLeaf){
+			// 	continue;
+			// }
 
 
 			// TODO consider passing matrices in an array to avoid uniformMatrix4fv overhead
@@ -885,11 +909,13 @@ export class Renderer {
 			{
 				let uFilterReturnNumberRange = material.uniforms.uFilterReturnNumberRange.value;
 				let uFilterNumberOfReturnsRange = material.uniforms.uFilterNumberOfReturnsRange.value;
+				let uFilterPointSourceIDClipRange = material.uniforms.uFilterPointSourceIDClipRange.value;
 				
 				
 				
 				shader.setUniform2f("uFilterReturnNumberRange", uFilterReturnNumberRange);
 				shader.setUniform2f("uFilterNumberOfReturnsRange", uFilterNumberOfReturnsRange);
+				shader.setUniform2f("uFilterPointSourceIDClipRange", uFilterPointSourceIDClipRange);
 			}
 
 			let webglBuffer = null;
@@ -1069,12 +1095,16 @@ export class Renderer {
 						defines.push("#define clip_gps_enabled");
 					}
 
-					if(attributes.returnNumber){
+					if(attributes["return number"]){
 						defines.push("#define clip_return_number_enabled");
 					}
 
-					if(attributes.numberOfReturns){
+					if(attributes["number of returns"]){
 						defines.push("#define clip_number_of_returns_enabled");
+					}
+
+					if(attributes["source id"] || attributes["point source id"]){
+						defines.push("#define clip_point_source_id_enabled");
 					}
 
 				}
